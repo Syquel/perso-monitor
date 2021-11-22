@@ -1,10 +1,28 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { ConfigModule } from '@nestjs/config';
+import * as fs from 'fs';
+import * as path from 'path';
+import { WebMonModule } from './web-mon/web-mon.module';
+import { NotificationModule } from './notification/notification.module';
+import { ScheduleModule } from '@nestjs/schedule';
+
+const CONFIG_FILE_PATH = 'config.json';
 
 @Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    ScheduleModule.forRoot(),
+    ConfigModule.forRoot({
+      load: [
+        (): Record<string, unknown> => {
+          console.debug('Path: ' + __dirname);
+          const configFilePath: string = path.resolve(__dirname, CONFIG_FILE_PATH);
+          const rawConfig: string = fs.readFileSync(configFilePath, 'utf-8');
+          return JSON.parse(rawConfig) as Record<string, unknown>;
+        }
+      ]
+    }),
+    NotificationModule,
+    WebMonModule
+  ]
 })
 export class AppModule {}
