@@ -1,12 +1,19 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
+import Module = __WebpackModuleApi.Module;
 
-async function bootstrap() : Promise<INestApplication> {
+declare const module: Module;
+
+async function bootstrap(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule);
-  app.useGlobalPipes(new ValidationPipe({forbidUnknownValues: true, transform: true}));
 
   await app.listen(3000);
+
+  if (module.hot) {
+    module.hot.accept();
+    module.hot.dispose(() => void app.close());
+  }
 
   return app;
 }
