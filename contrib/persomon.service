@@ -1,0 +1,20 @@
+[Unit]
+Description=PersoMon
+Wants=network-online.target
+After=syslog.target network.target network-online.target
+
+[Service]
+User=persomon
+Group=persomon
+UMask=002
+
+Type=simple
+
+WorkingDirectory=/opt/persomon
+ExecStart=~/.fnm/fnm exec --using=lts/Gallium node dist/main.js
+TimeoutStopSec=20
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
