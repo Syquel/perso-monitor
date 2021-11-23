@@ -50,11 +50,11 @@ export default function (env: WebpackEnv, argv: { mode: EnvVars, env: WebpackEnv
 
     return {
         target: 'node',
-        mode: utils.ifProduction('production', 'development'),
-        devtool: utils.ifProduction('source-map', 'inline-source-map'),
+        mode: utils.ifDevelopment('development', 'production'),
+        devtool: utils.ifDevelopment('inline-source-map', 'source-map'),
         watch: utils.ifDevelopment(true, false),
         entry: removeEmpty<string>([
-            utils.ifNotProduction('webpack/hot/poll?100'),
+            utils.ifDevelopment('webpack/hot/poll?100'),
             './src/main.ts'
         ]),
         output: {
@@ -74,8 +74,8 @@ export default function (env: WebpackEnv, argv: { mode: EnvVars, env: WebpackEnv
                 analyzerMode: 'static',
                 openAnalyzer: false,
             }),
-            utils.ifNotProduction(new HotModuleReplacementPlugin()),
-            utils.ifNotProduction(new RunScriptWebpackPlugin({ name: 'main.js' }))
+            utils.ifDevelopment(new HotModuleReplacementPlugin()),
+            utils.ifDevelopment(new RunScriptWebpackPlugin({ name: 'main.js' }))
         ]),
         module: {
             rules: [
@@ -99,7 +99,7 @@ export default function (env: WebpackEnv, argv: { mode: EnvVars, env: WebpackEnv
             ]
         },
         externalsPresets: { node: true },
-        externals: utils.ifNotProduction(webpackNodeExternals({ allowlist: [ 'webpack/hot/poll?100' ] }), []),
+        externals: utils.ifDevelopment(webpackNodeExternals({ allowlist: [ 'webpack/hot/poll?100' ] }), []),
         optimization: {
             runtimeChunk: 'single',
             splitChunks: {
