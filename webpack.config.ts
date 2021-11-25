@@ -1,13 +1,12 @@
-import { Configuration, ContextReplacementPlugin, HotModuleReplacementPlugin, IgnorePlugin, ProgressPlugin } from 'webpack';
-import * as path from 'path';
-import CopyPlugin from 'copy-webpack-plugin';
-import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 import { CleanWebpackPlugin } from 'clean-webpack-plugin';
-import { TsconfigPathsPlugin } from 'tsconfig-paths-webpack-plugin';
+import CopyPlugin from 'copy-webpack-plugin';
 import ESLintWebpackPlugin from 'eslint-webpack-plugin';
-import { EnvVars, getIfUtils, IfUtils, removeEmpty } from 'webpack-config-utils';
-import webpackNodeExternals from 'webpack-node-externals';
+import * as path from 'path';
 import { RunScriptWebpackPlugin } from 'run-script-webpack-plugin';
+import { TsconfigPathsPlugin } from 'tsconfig-paths-webpack-plugin';
+import { Configuration, ContextReplacementPlugin, HotModuleReplacementPlugin, IgnorePlugin, ProgressPlugin } from 'webpack';
+import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
+import webpackNodeExternals from 'webpack-node-externals';
 
 const lazyModules: string[] = [
     // nestjs
@@ -42,26 +41,35 @@ const checkLazyModules = (resource: string): boolean => {
     return false;
 };
 
-type WebpackEnv = Record<string, boolean>;
+function compact<T>(array: ReadonlyArray<T | undefined>): Array<Exclude<T, undefined>> {
+    return array.filter(entry => entry !== undefined) as Array<Exclude<T, undefined>>;
+}
 
-export default function (env: WebpackEnv, argv: { mode: EnvVars, env: WebpackEnv }): Configuration {
-    void env;
-    const utils: IfUtils = getIfUtils(argv.mode);
+type WebpackEnv = {
+    WEBPACK_SERVE?: boolean,
+    WEBPACK_BUILD?: boolean,
+    WEBPACK_WATCH?: boolean
+    [p: string]: unknown
+};
+type WebpackArgv = { mode: Configuration['mode'], env: WebpackEnv, watch?: boolean, hot?: boolean };
+
+export default function (env: WebpackEnv, argv: WebpackArgv): Configuration {
+    const isDevelopment: boolean = argv.mode == 'development';
+    const isWatch: boolean = env.WEBPACK_WATCH === true;
 
     return {
         target: 'node',
-        mode: utils.ifDevelopment('development', 'production'),
-        devtool: utils.ifDevelopment('inline-source-map', 'source-map'),
-        watch: utils.ifDevelopment(true, false),
-        entry: removeEmpty<string>([
-            utils.ifDevelopment('webpack/hot/poll?100'),
+        mode: isDevelopment ? 'development' : 'production',
+        devtool: isDevelopment ? 'inline-source-map' : 'source-map',
+        entry: compact([
+            isWatch ? 'webpack/hot/poll?100' : undefined,
             './src/main.ts'
         ]),
         output: {
             path: path.resolve(__dirname, 'dist'),
             filename: '[name].js'
         },
-        plugins: removeEmpty([
+        plugins: compact([
             new ProgressPlugin(),
             new CleanWebpackPlugin(),
             new ESLintWebpackPlugin({extensions: [ '*.ts' ]}),
@@ -74,8 +82,8 @@ export default function (env: WebpackEnv, argv: { mode: EnvVars, env: WebpackEnv
                 analyzerMode: 'static',
                 openAnalyzer: false,
             }),
-            utils.ifDevelopment(new HotModuleReplacementPlugin()),
-            utils.ifDevelopment(new RunScriptWebpackPlugin({ name: 'main.js' }))
+            isWatch ? new HotModuleReplacementPlugin() : undefined,
+            isWatch ? new RunScriptWebpackPlugin({ name: 'main.js' }) : undefined
         ]),
         module: {
             rules: [
@@ -99,7 +107,7 @@ export default function (env: WebpackEnv, argv: { mode: EnvVars, env: WebpackEnv
             ]
         },
         externalsPresets: { node: true },
-        externals: utils.ifDevelopment(webpackNodeExternals({ allowlist: [ 'webpack/hot/poll?100' ] }), []),
+        externals: isWatch ? webpackNodeExternals({ allowlist: [ 'webpack/hot/poll?100' ] }) : [],
         optimization: {
             runtimeChunk: 'single',
             splitChunks: {
